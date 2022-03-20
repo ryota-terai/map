@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ja">
+    <head>
+        <meta charset="utf-8">
+        <title>わかりやすい避難地図</title>
+        <meta name="description" content="西海市の避難地図です">
+        <link href="style.css" rel="stylesheet">
+        <!-- MapLibre -->
+        <link href="https://unpkg.com/maplibre-gl@2.1.1/dist/maplibre-gl.css" rel="stylesheet" />
+        <script src="https://unpkg.com/maplibre-gl@2.1.1/dist/maplibre-gl.js"></script>
+        <!-- Semantic-UI  -->
+        <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css">
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"></script>
+    </head>
+    <body>
+        <!-- ヘッダー -->
+        <div id="header">
+            <div id="header-title"><h2>わかりやすい避難地図</h2></div>
+            <div id="print-button"><button class="circular ui compact icon green button"><i class="print icon"></i></button></div>
+        </div>
+        <!-- 地図 -->
+        <div id="map-area">
+<!--            <div id="sidebar" class="ui bottom attached segment pushable">
+                <div id="button-area" class="ui grey visible inverted left vertical sidebar menu">
+                    <a class="item" href="/GISApp/faces/shelter/index.xhtml"><i class="home icon"></i>避難所一覧</a>
+                    <a class="item" href="/GISApp/faces/post/post/index.xhtml"><i class="edit icon"></i>災害情報投稿</a>
+                    <a class="item" href="/GISApp/faces/post/check/index.xhtml"><i class="tag icon"></i>災害情報審査</a>
+                    <a class="item" href="/GISApp/faces/post/view/index.xhtml"><i class="comments icon"></i>災害情報一覧</a>
+                </div>
+            </div>-->
+            <div id="map"></div>
+        </div>
+        <!-- 避難所情報 -->
+        <div id="bottom-area" >
+            <div id="shelter-info">
+                <div class="ui icon message" id="shelter-info-textarea">
+                    <i class="bullhorn icon"></i>
+                    <div class="content">
+                        <div class="header"><span id="shelter-info-title">避難所情報</span></div>
+                        <p id="shelter-name"></p>
+                        <div id="shelter-info-comment"></div>
+                    </div>
+                </div>
+            </div>
+            <div id="hanrei-info">
+                <img class="hanrei-image" src="data/gake.png" alt="土砂災害警戒区域急傾斜地の崩壊" />
+                <img class="hanrei-image" src="data/dosekiryu.png" alt="土砂災害特別警戒区域土石流" />
+                <img class="hanrei-image" src="data/zisuberi.png" alt="土砂災害特別警戒区域地滑り" />
+                <img class="hanrei-image" src="data/shinsui.png"  alt="洪水浸水想定区域の深さ">
+            </div>
+        </div>
+        <script src="index.js"></script>
+    </body>
+</html>

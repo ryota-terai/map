@@ -1,0 +1,79 @@
+body {
+    width: 100%;
+    height: 100%;
+    margin: 0px;
+    padding: 0px;
+    -webkit-print-color-adjust: exact;
+}
+/* ヘッダー */
+#header {
+    height: 5%;
+    background-color: #55c500;
+    display: flex;
+    align-items: center;
+}
+#header-title{
+    color: #fff;
+    padding-left: 10px;
+}
+#print-button{
+    margin-left: auto;
+}
+/* /ヘッダー */
+/* コンテンツ */
+/* 地図 */
+#map-area {
+    height: 70%;
+    display: flex;
+}
+#map {
+    /*width: 85%;*/
+     width: 100%; 
+    height: 100%;
+}
+/* サイドバー */
+#sidebar{
+    width: 15%;
+}
+#button-area{
+    width: 100%;
+    height: 100%;
+}
+/* /コンテンツ */
+/* フッター */
+#bottom-area{
+    height: 25%;
+    display: flex;
+}
+/* 避難所情報 */
+#shelter-info-title{
+    font-size: 25px;
+}
+#shelter-info-comment{
+    font-size: 20px;
+}
+#shelter-info{
+    height: 100%;
+    width: 50%;
+}
+#shelter-info-textarea{
+    height: 100%;
+}
+#shelter-name{
+    font-size: 20px;
+    font-weight: bold;
+}
+#view-info{
+    font-size: 15px;
+}
+/* 凡例 */
+#hanrei-info{
+    width: 50%;
+    display:flex;
+    overflow-x: scroll;
+}
+.hanrei-image{
+    height: 100%;
+    width: auto;
+}
+/* /フッター */
