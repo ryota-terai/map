@@ -31,17 +31,16 @@ const areaCode = params.get('areaCode');
 map.on('load', function () {
     $.getJSON("./data/shelter.json", {},
             function (json) {
-//                var shelterJson = json;
-//                var features = shelterJson.features;
-//                var filteredShelter = features.filter(function (feature) {
-//                    return feature.properties.P20_001.startsWith(areaCode);
+//                var features = json.features;
+//                var filtered = features.filter(function (feature) {
+//                    return feature.properties.A48_003.startsWith(areaCode);
 //                });
-//                shelterJson.features = filteredShelter;
+//                json.features = filtered;
 
                 // 避難所情報レイヤを追加
                 map.addSource('shelter_point', {
                     type: 'geojson',
-                    data: shelterJson
+                    data: json
                 });
                 map.loadImage(
                         './img/shelter.png',
@@ -66,10 +65,10 @@ map.on('load', function () {
     $.getJSON("./data/a48.json", {},
             function (json) {
 //                var features = json.features;
-//                var filteredShelter = features.filter(function (feature) {
+//                var filtered = features.filter(function (feature) {
 //                    return feature.properties.A48_003.startsWith(areaCode);
 //                });
-//                json.features = filteredShelter;
+//                json.features = filtered;
 
                 // 災害危険区域レイヤを追加
                 map.addSource('a48', {
