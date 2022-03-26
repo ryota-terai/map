@@ -31,19 +31,17 @@ const areaCode = params.get('areaCode');
 map.on('load', function () {
     $.getJSON("./data/shelter.json", {},
             function (json) {
-//                var shelterJson = json;
-//                var features = shelterJson.features;
-//                var filteredShelter = features.filter(function (feature) {
-//                    return feature.properties.open === false && feature.properties.P20_001.startsWith(areaCode);
-//                });
-//
-//                var closedShelter = shelterJson;
-//                closedShelter.features = filteredShelter;
+                var shelterJson = json;
+                var features = shelterJson.features;
+                var filteredShelter = features.filter(function (feature) {
+                    return feature.properties.P20_001.startsWith(areaCode);
+                });
+                shelterJson.features = filteredShelter;
 
                 // 避難所情報レイヤを追加
                 map.addSource('shelter_point', {
                     type: 'geojson',
-                    data: json
+                    data: shelterJson
                 });
                 map.loadImage(
                         './img/shelter.png',
@@ -61,6 +59,31 @@ map.on('load', function () {
                     'layout': {
                         'icon-image': 'shelter_icon',
                         'icon-size': 0.1
+                    }
+                });
+            });
+
+    $.getJSON("./data/a48.json", {},
+            function (json) {
+                var features = json.features;
+                var filteredShelter = features.filter(function (feature) {
+                    return feature.properties.A48_003.startsWith(areaCode);
+                });
+                json.features = filteredShelter;
+
+                // 災害危険区域レイヤを追加
+                map.addSource('a48', {
+                    type: 'geojson',
+                    data: json
+                });
+                map.addLayer({
+                    'id': 'a48',
+                    'type': 'fill',
+                    'source': 'a48',
+                    "paint": {
+                        "fill-antialias": false,
+                        "fill-color": "rgba(255, 0, 0, 1)",
+                        "fill-opacity": 0.3
                     }
                 });
             });
@@ -107,6 +130,64 @@ map.on('click', 'shelter_point', function (e) {
             + '</table>';
     shelterInfo.innerHTML = shelterInfoComment;
 
+});
+
+// 災害危険区域レイヤを追加
+map.on('click', 'a48', function (e) {
+    console.log("click")
+
+    var coordinates;
+    if (e.features[0].geometry.type === 'Polygon') {
+        coordinates = e.features[0].geometry.coordinates[0][0].slice();
+    } else if (e.features[0].geometry.type === 'MultiPolygon') {
+        coordinates = e.features[0].geometry.coordinates[0][0][0].slice();
+    }
+    var html = '<h2>' + e.features[0].properties.A48_005 + '</h2>';
+    html += '<hr>'
+            + '<table>'
+            + '<tr><td>' + '都道府県名</td><td>' + e.features[0].properties.A48_001 + '</td></tr>'
+            + '<tr><td>' + '市町村名</td><td>' + e.features[0].properties.A48_002 + '</td></tr>'
+            + '<tr><td>' + '代表行政コード</td><td>' + e.features[0].properties.A48_003 + '</td></tr>'
+            + '<tr><td>' + '指定主体区分</td><td>' + e.features[0].properties.A48_004 + '('
+            + (e.features[0].properties.A48_004 === 1 ? '都道府県' :
+                    (e.features[0].properties.A48_004 === 2 ? '市町村' : '')
+                    )
+            + ')</td></tr>'
+            + '<tr><td>' + '区域名</td><td>' + e.features[0].properties.A48_005 + '</td></tr>'
+            + '<tr><td>' + '所在地</td><td>' + e.features[0].properties.A48_006 + '</td></tr>'
+            + '<tr><td>' + '指定理由コード</td><td>' + e.features[0].properties.A48_007 + '('
+            + (e.features[0].properties.A48_007 === 1 ? '水害(河川)' :
+                    (e.features[0].properties.A48_007 === 2 ? '水害(海)' :
+                            (e.features[0].properties.A48_007 === 3 ? '水害(河川・海)' :
+                                    (e.features[0].properties.A48_007 === 4 ? '急傾斜地崩壊等' :
+                                            (e.features[0].properties.A48_007 === 5 ? '地すべり等' :
+                                                    (e.features[0].properties.A48_007 === 6 ? '火山被害' :
+                                                            (e.features[0].properties.A48_007 === 7 ? 'その他' : '')
+                                                            )
+                                                    )
+                                            )
+                                    )
+                            )
+                    )
+            + ')</td></tr>'
+            + '<tr><td>' + '指定理由詳細</td><td>' + e.features[0].properties.A48_008 + '</td></tr>'
+            + '<tr><td>' + '告示年月日</td><td>' + e.features[0].properties.A48_009 + '</td></tr>'
+            + '<tr><td>' + '告示番号</td><td>' + e.features[0].properties.A48_010 + '</td></tr>'
+            + '<tr><td>' + '根拠条例</td><td>' + e.features[0].properties.A48_011 + '</td></tr>'
+            + '<tr><td>' + '面積</td><td>' + e.features[0].properties.A48_012 + 'ha</td></tr>'
+            + '<tr><td>' + '縮尺</td><td>' + e.features[0].properties.A48_013 + '</td></tr>'
+            + '<tr><td>' + 'その他</td><td>' + e.features[0].properties.A48_014 + '</td></tr>'
+            + '</table>';
+
+    while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+    }
+
+    // ポップアップを表示する
+    new maplibregl.Popup()
+            .setLngLat(coordinates)
+            .setHTML(html)
+            .addTo(map);
 });
 
 // Change the cursor to a pointer when the mouse is over the places layer.
