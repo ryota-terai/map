@@ -29,6 +29,31 @@ const areaCode = params.get('areaCode');
 
 // 画面がロードされたら地図にレイヤを追加する
 map.on('load', function () {
+    // 災害危険区域レイヤを追加
+    $.getJSON("./data/a48.json", {},
+            function (json) {
+                var features = json.features;
+                var filtered = features.filter(function (feature) {
+                    return areaCode === null || areaCode === '' || feature.properties.A48_003.startsWith(areaCode);
+                });
+                json.features = filtered;
+
+                map.addSource('a48', {
+                    type: 'geojson',
+                    data: json
+                });
+                map.addLayer({
+                    'id': 'a48',
+                    'type': 'fill',
+                    'source': 'a48',
+                    "paint": {
+                        "fill-antialias": false,
+                        "fill-color": "rgba(0, 0, 0, 1)",
+                        "fill-opacity": 0.5
+                    }
+                });
+            });
+
     // 避難所情報レイヤを追加
     $.getJSON("./data/shelter.json", {},
             function (json) {
@@ -62,30 +87,6 @@ map.on('load', function () {
                 });
             });
 
-    // 災害危険区域レイヤを追加
-    $.getJSON("./data/a48.json", {},
-            function (json) {
-                var features = json.features;
-                var filtered = features.filter(function (feature) {
-                    return areaCode === null || areaCode === '' || feature.properties.A48_003.startsWith(areaCode);
-                });
-                json.features = filtered;
-
-                map.addSource('a48', {
-                    type: 'geojson',
-                    data: json
-                });
-                map.addLayer({
-                    'id': 'a48',
-                    'type': 'fill',
-                    'source': 'a48',
-                    "paint": {
-                        "fill-antialias": false,
-                        "fill-color": "rgba(255, 0, 0, 1)",
-                        "fill-opacity": 0.3
-                    }
-                });
-            });
 });
 
 // 避難所情報の地物をクリックしたときに、コメントを表示する
@@ -114,11 +115,11 @@ map.on('click', 'shelter_point', function (e) {
             .addTo(map);
 
     // 避難所情報欄に避難所名を記載する
-    var shelterName = $("#shelter-name")[0];
-    shelterName.innerHTML = e.features[0].properties.P20_002;
+    var infoName = $("#info-name")[0];
+    infoName.innerHTML = e.features[0].properties.P20_002;
 
-    var shelterInfo = $("#shelter-info-comment")[0];
-    var shelterInfoComment = '<table><tr><td>' + '施設の種類</td><td>' + e.features[0].properties.P20_004 + '</td></tr>'
+    var info = $("#info-comment")[0];
+    var infoComment = '<table><tr><td>' + '施設の種類</td><td>' + e.features[0].properties.P20_004 + '</td></tr>'
             + '<tr><td>地震災害</td><td>' + (e.features[0].properties.P20_007 === 1 ? '〇' : '×') + '</td></tr>'
             + '<tr><td>津波災害</td><td>' + (e.features[0].properties.P20_008 === 1 ? '〇' : '×') + '</td></tr>'
             + '<tr><td>水害</td><td>' + (e.features[0].properties.P20_009 === 1 ? '〇' : '×') + '</td></tr>'
@@ -126,7 +127,7 @@ map.on('click', 'shelter_point', function (e) {
             + '<tr><td>その他</td><td>' + (e.features[0].properties.P20_011 === 1 ? '〇' : '×') + '</td></tr>'
             + '<tr><td>指定なし</td><td>' + (e.features[0].properties.P20_012 === 1 ? '〇' : '×') + '</td></tr>'
             + '</table>';
-    shelterInfo.innerHTML = shelterInfoComment;
+    info.innerHTML = infoComment;
 
 });
 
@@ -153,11 +154,11 @@ map.on('click', 'a48', function (e) {
             .addTo(map);
 
 
-    var shelterName = $("#shelter-name")[0];
-    shelterName.innerHTML = e.features[0].properties.A48_005;
+    var infoName = $("#info-name")[0];
+    infoName.innerHTML = e.features[0].properties.A48_005;
 
-    var shelterInfo = $("#shelter-info-comment")[0];
-    var shelterInfoComment = '<table>'
+    var info = $("#info-comment")[0];
+    var infoComment = '<table>'
             + '<tr><td>' + '都道府県名</td><td>' + e.features[0].properties.A48_001 + '</td></tr>'
             + '<tr><td>' + '市町村名</td><td>' + e.features[0].properties.A48_002 + '</td></tr>'
             + '<tr><td>' + '代表行政コード</td><td>' + e.features[0].properties.A48_003 + '</td></tr>'
@@ -191,7 +192,7 @@ map.on('click', 'a48', function (e) {
             + '<tr><td>' + '縮尺</td><td>' + e.features[0].properties.A48_013 + '</td></tr>'
             + '<tr><td>' + 'その他</td><td>' + e.features[0].properties.A48_014 + '</td></tr>'
             + '</table>';
-    shelterInfo.innerHTML = shelterInfoComment;
+    info.innerHTML = infoComment;
 });
 
 // Change the cursor to a pointer when the mouse is over the places layer.

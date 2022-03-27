@@ -46,20 +46,20 @@ body {
     display: flex;
 }
 /* 避難所情報 */
-#shelter-info-title{
+#info-title{
     font-size: 25px;
 }
-#shelter-info-comment{
+#info-comment{
     font-size: 20px;
 }
-#shelter-info{
+#info{
     height: 100%;
     width: 50%;
 }
-#shelter-info-textarea{
+#info-textarea{
     height: 100%;
 }
-#shelter-name{
+#info-name{
     font-size: 20px;
     font-weight: bold;
 }
