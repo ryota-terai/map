@@ -576,6 +576,8 @@ select.onchange = function () {
     var areaCode = this.value;
     var positionUrl;
     switch (areaCode) {
+        case "":
+            return;
         case "01":
             positionUrl = "&lat=43.063940637499996&lon=141.347906782";
             break;
