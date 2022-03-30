@@ -14,6 +14,26 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"></script>
     </head>
     <body>
+        <dialog id="dialog">
+            <form method="dialog">
+                <input type="checkbox" id="shelter" name="shelter" value="on">
+                <label for="shelter">避難所情報</label>
+                <br>
+                <input type="checkbox" id="a48" name="a48" value="on">
+                <label for="a48">災害危険区域</label>
+                <br>
+                <input type="checkbox" id="p28" name="p28" value="on">
+                <label for="p28">国・都道府県の機関データ</label>
+                <br>
+                <input type="checkbox" id="n02" name="n02" value="on">
+                <label for="n02">鉄道データ</label>
+                <br>
+                <input type="checkbox" id="mesh500h30" name="mesh500h30" value="on">
+                <label for="mesh500h30">500mメッシュ別将来推計人口データ</label>
+                <br>
+                <button id="close" value="default">Close</button>
+                </form>
+        </dialog>
         <!-- ヘッダー -->
         <div id="header">
             <div id="header-title"><h2>わかりやすい地図</h2></div>
@@ -67,17 +87,7 @@
                 <option value="46">鹿児島県</option>
                 <option value="47">沖縄県</option>
             </select>
-            <input type="checkbox" id="shelter" name="shelter" value="on">
-            <label for="shelter">避難所情報</label>
-            <input type="checkbox" id="a48" name="a48" value="on">
-            <label for="a48">災害危険区域</label>
-            <input type="checkbox" id="p28" name="p28" value="on">
-            <label for="p28">国・都道府県の機関データ</label>
-            <input type="checkbox" id="n02" name="n02" value="on">
-            <label for="n02">鉄道データ</label>
-            <input type="checkbox" id="mesh500h30" name="mesh500h30" value="on">
-            <label for="mesh500h30">500mメッシュ別将来推計人口データ</label>
-
+            <button id="updateDetails">表示の選択</button>
 
             <div id="print-button"><button class="circular ui compact icon green button"><i class="print icon"></i></button></div>
         </div>

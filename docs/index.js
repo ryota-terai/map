@@ -30,6 +30,7 @@ const params = url.searchParams;
 const areaCode = params.get('areaCode');
 const lat = params.get('lat');
 const lon = params.get('lon');
+const context = "./data/gml/datalist";
 
 if (lat !== null && lon !== null) {
     map.setCenter([lon, lat]);
@@ -136,7 +137,7 @@ check = document.getElementById('a48');
 check.onchange = function () {
     var value = this.checked;
     if (value === true && a48Loaded === false) {
-        $.getJSON("./data/gml/datalist/A48/a48.json", {},
+        $.getJSON(context + '/A48/a48.json', {},
                 function (json) {
                     a48Loaded = true;
                     var features = json.features;
@@ -236,7 +237,7 @@ check.onchange = function () {
     var value = this.checked;
     if (value === true && p28Loaded === false) {
         // 国・都道府県の機関データを追加
-        $.getJSON('./data/gml/datalist/P28/P28-13.geojson', {},
+        $.getJSON(context + '/P28/P28-13.geojson', {},
                 function (json) {
                     p28Loaded = true;
                     var features = json.features;
@@ -444,7 +445,7 @@ check.onchange = function () {
     var value = this.checked;
     if (value === true && n02Loaded === false) {
         // 鉄道データを追加
-        $.getJSON('./data/gml/datalist/N02/N02-20_RailroadSection.geojson', {},
+        $.getJSON(context + '/N02/N02-20_RailroadSection.geojson', {},
                 function (json) {
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
@@ -619,7 +620,7 @@ check.onchange = function () {
     var value = this.checked;
     if (value === true && mesh500h30Loaded === false) {
         // 500mメッシュ別将来推計人口データ（H30国政局推計）を追加
-        $.getJSON('./data/gml/datalist/mesh500h30/500m_mesh_2018_' + (areaCode === null ? '' : areaCode.substring(0, 2)) + '.geojson', {},
+        $.getJSON(context + '/mesh500h30/500m_mesh_2018_' + (areaCode === null ? '' : areaCode.substring(0, 2)) + '.geojson', {},
                 function (json) {
                     mesh500h30Loaded = true;
 //                var features = json.features;
@@ -681,7 +682,7 @@ check.onchange = function () {
                     });
                 });
         if (areaCode.substring(0, 2) === '01') {
-            $.getJSON('./data/gml/datalist/mesh500h30/500m_mesh_2018_' + (areaCode === null ? '' : areaCode.substring(0, 2)) + '-2.geojson', {},
+            $.getJSON(context + '/mesh500h30/500m_mesh_2018_' + (areaCode === null ? '' : areaCode.substring(0, 2)) + '-2.geojson', {},
                     function (json) {
                         mesh500h30Loaded = true;
 //                var features = json.features;
@@ -910,6 +911,16 @@ select.onchange = function () {
     }
     window.location.href = "index.html?areaCode=" + areaCode + positionUrl;
 }
+
+var updateButton = document.getElementById('updateDetails');
+var dialog = document.getElementById('dialog');
+updateButton.addEventListener('click', function onOpen() {
+    if (typeof dialog.showModal === "function") {
+        dialog.showModal();
+    } else {
+        alert("The <dialog> API is not supported by this browser");
+    }
+});
 
 // Change the cursor to a pointer when the mouse is over the places layer.
 map.on('mouseenter', 'shelter_point', function () {
