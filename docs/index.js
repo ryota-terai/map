@@ -520,7 +520,7 @@ check.onchange = function () {
                                 + '</table>';
                         info.innerHTML = infoComment;
                     });
-                    $.getJSON('./data/gml/datalist/N02/N02-20_Station.geojson', {},
+                    $.getJSON(context + '/N02/N02-20_Station.geojson', {},
                             function (json) {
                                 n02Loaded = true;
 //                var features = json.features;
