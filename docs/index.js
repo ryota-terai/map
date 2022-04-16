@@ -438,6 +438,82 @@ check.onchange = function () {
     }
 }
 
+// 行政区域データ
+var n03Loaded = false;
+check = document.getElementById('n03');
+check.onchange = function () {
+    var value = this.checked;
+    if (value === true && n03Loaded === false) {
+        // 鉄道データを追加
+        $.getJSON(context + '/N03/N03-21_' + (areaCode === null ? '' : areaCode.substring(0, 2)) + '_210101.geojson', {},
+                function (json) {
+//                var features = json.features;
+//                var filtered = features.filter(function (feature) {
+//                    return feature.properties.P28_001.startsWith(areaCode);
+//                });
+//                json.features = filtered;
+
+                    map.addSource('n03', {
+                        type: 'geojson',
+                        data: json
+                    });
+                    map.addLayer({
+                        'id': 'n03',
+                        'type': 'line',
+                        'source': 'n03',
+                        "paint": {
+                            "line-color": "rgba(0, 255, 0, 1)",
+                            "line-width": 5
+                        }
+                    });
+                    map.on('click', 'n03', function (e) {
+                        console.log("click")
+
+                        var coordinates;
+                        if (e.features[0].geometry.type === 'Polygon') {
+                            coordinates = e.features[0].geometry.coordinates[0][0].slice();
+                        } else if (e.features[0].geometry.type === 'MultiPolygon') {
+                            coordinates = e.features[0].geometry.coordinates[0][0][0].slice();
+                        } else if (e.features[0].geometry.type === 'LineString') {
+                            coordinates = e.features[0].geometry.coordinates[0].slice();
+                        } else if (e.features[0].geometry.type === 'MultiLineString') {
+                            coordinates = e.features[0].geometry.coordinates[0][0].slice();
+                        }
+                        var html = e.features[0].properties.N03_004;
+
+                        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                        }
+
+                        // ポップアップを表示する
+                        new maplibregl.Popup()
+                                .setLngLat(coordinates)
+                                .setHTML(html)
+                                .addTo(map);
+                        var infoName = $("#info-name")[0];
+                        infoName.innerHTML = e.features[0].properties.N03_004;
+
+                        var info = $("#info-comment")[0];
+                        var infoComment = '<table>'
+                                + '<tr><td>都道府県名</td><td>' + e.features[0].properties.N03_001 + '</td></tr>'
+                                + '<tr><td>支庁・振興局名</td><td>' + e.features[0].properties.N03_002 + '</td></tr>'
+                                + '<tr><td>郡・政令都市名</td><td>' + e.features[0].properties.N03_003 + '</td></tr>'
+                                + '<tr><td>市区町村名</td><td>' + e.features[0].properties.N03_004 + '</td></tr>'
+                                + '<tr><td>行政区域コード</td><td>' + e.features[0].properties.N03_007 + '</td></tr>'
+                                + '</table>';
+                        info.innerHTML = infoComment;
+                    });
+                });
+    }
+    if (n03Loaded) {
+        if (value === true) {
+            map.setLayoutProperty('n03', 'visibility', 'visible');
+        } else {
+            map.setLayoutProperty('n03', 'visibility', 'none');
+        }
+    }
+}
+
 // 鉄道データを追加
 var n02Loaded = false;
 check = document.getElementById('n02');
