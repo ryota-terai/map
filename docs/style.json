@@ -12,7 +12,7 @@
   "sources": {
     "openmaptiles": {
       "type": "vector",
-      "url": "https://tile.openstreetmap.jp/data/japan.json"
+      "url": "https://tile.openstreetmap.jp/data/planet.json"
     },
     "takeshima": {
       "type": "vector",
