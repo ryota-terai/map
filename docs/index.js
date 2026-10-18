@@ -60,6 +60,19 @@ function loadFailed(checkboxId) {
     alert('データの読み込みに失敗しました');
 }
 
+// 未追加のソースのデータのみ取得する（複数ファイルのうち一部の取得に失敗した後の再試行用）
+function getJSONIfAbsent(sourceId, url, callback) {
+    if (map.getSource(sourceId)) {
+        return $.Deferred().resolve().promise();
+    }
+    return $.getJSON(url, {}, function (json) {
+        // 再試行と競合して既に追加済みの場合は何もしない
+        if (!map.getSource(sourceId)) {
+            callback(json);
+        }
+    });
+}
+
 // 追加済みのレイヤの表示・非表示を切り替える（読み込み中のレイヤは何もしない）
 function setVisibility(layerId, visible) {
     if (map.getLayer(layerId)) {
@@ -196,25 +209,11 @@ check.onchange = function () {
                     map.on('click', 'a48', function (e) {
                         console.log("click")
 
-                        var coordinates;
-                        if (e.features[0].geometry.type === 'Polygon') {
-                            coordinates = e.features[0].geometry.coordinates[0][0].slice();
-                        } else if (e.features[0].geometry.type === 'MultiPolygon') {
-                            coordinates = e.features[0].geometry.coordinates[0][0][0].slice();
-                        } else if (e.features[0].geometry.type === 'LineString') {
-                            coordinates = e.features[0].geometry.coordinates[0].slice();
-                        } else if (e.features[0].geometry.type === 'MultiLineString') {
-                            coordinates = e.features[0].geometry.coordinates[0][0].slice();
-                        }
                         var html = e.features[0].properties.A48_005;
-
-                        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-                        }
 
                         // ポップアップを表示する
                         new maplibregl.Popup()
-                                .setLngLat(coordinates)
+                                .setLngLat(e.lngLat)
                                 .setHTML(html)
                                 .addTo(map);
 
@@ -292,83 +291,83 @@ check.onchange = function () {
                             "circle-color": "rgba(255, 0, 0, 1)"
                         }
                     });
+
+                    map.on('click', 'l01', function (e) {
+                        console.log("click")
+
+                        var coordinates = e.features[0].geometry.coordinates.slice();
+                        var html = e.features[0].properties.L01_024;
+                        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
+                            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
+                        }
+
+                        // ポップアップを表示する
+                        new maplibregl.Popup()
+                                .setLngLat(coordinates)
+                                .setHTML(html)
+                                .addTo(map);
+                        var infoName = $("#info-name")[0];
+                        infoName.innerHTML = e.features[0].properties.L01_024;
+                        var info = $("#info-comment")[0];
+                        var infoComment = '<table>'
+                                + '<tr><td>見出し番号</td><td>' + e.features[0].properties.L01_001 + '('
+                                + (e.features[0].properties.L01_001 === '000' ? '住宅地' :
+                                        (e.features[0].properties.L01_001 === '003' ? '宅地見込地' :
+                                                (e.features[0].properties.L01_001 === '005' ? '商業地' :
+                                                        (e.features[0].properties.L01_001 === '007' ? '準工業地' :
+                                                                (e.features[0].properties.L01_001 === '009' ? '工業地' :
+                                                                        (e.features[0].properties.L01_001 === '010' ? '市街化調整区域内の現況宅地' :
+                                                                                (e.features[0].properties.L01_001 === '013' ? '市街化調整区域内の現況林地' : '')))))))
+                                + ')</td></tr>'
+                                + '<tr><td>一連番号</td><td>' + e.features[0].properties.L01_002 + '</td></tr>'
+                                + '<tr><td>年度</td><td>' + e.features[0].properties.L01_005 + '</td></tr>'
+                                + '<tr><td>公示価格</td><td>' + e.features[0].properties.L01_006.toLocaleString() + '円/m2</td></tr>'
+                                + '<tr><td>対前年変動率</td><td>' + e.features[0].properties.L01_007.toLocaleString() + '%</td></tr>'
+                                + '<tr><td>標準地行政区域コード</td><td>' + e.features[0].properties.L01_022 + '</td></tr>'
+                                + '<tr><td>標準地市区町村名称</td><td>' + e.features[0].properties.L01_023 + '</td></tr>'
+                                + '<tr><td>所在並びに地番</td><td>' + e.features[0].properties.L01_024 + '</td></tr>'
+                                + '<tr><td>住居表示</td><td>' + e.features[0].properties.L01_025 + '</td></tr>'
+                                + '<tr><td>地積</td><td>' + e.features[0].properties.L01_026 + 'm2</td></tr>'
+                                + '<tr><td>利用現況</td><td>' + e.features[0].properties.L01_027 + '</td></tr>'
+                                + '<tr><td>利用状況表示</td><td>' + e.features[0].properties.L01_028 + '</td></tr>'
+                                + '<tr><td>利用区分</td><td>' + e.features[0].properties.L01_029 + '</td></tr>'
+                                + '<tr><td>建物構造</td><td>' + e.features[0].properties.L01_030 + '</td></tr>'
+                                + '<tr><td>供給施設有無（水道）</td><td>' + e.features[0].properties.L01_031 + '</td></tr>'
+                                + '<tr><td>供給施設有無（ガス）</td><td>' + e.features[0].properties.L01_032 + '</td></tr>'
+                                + '<tr><td>供給施設有無（下水）</td><td>' + e.features[0].properties.L01_033 + '</td></tr>'
+                                + '<tr><td>形状</td><td>' + e.features[0].properties.L01_034 + '</td></tr>'
+                                + '<tr><td>間口比率</td><td>' + e.features[0].properties.L01_035 + '</td></tr>'
+                                + '<tr><td>奥行比率</td><td>' + e.features[0].properties.L01_036 + '</td></tr>'
+                                + '<tr><td>地上階層</td><td>' + e.features[0].properties.L01_037 + '</td></tr>'
+                                + '<tr><td>地下階層</td><td>' + e.features[0].properties.L01_038 + '</td></tr>'
+                                + '<tr><td>前面道路状況</td><td>' + e.features[0].properties.L01_039 + '</td></tr>'
+                                + '<tr><td>前面道路の方位</td><td>' + e.features[0].properties.L01_040 + '</td></tr>'
+                                + '<tr><td>前面道路の幅員</td><td>' + e.features[0].properties.L01_041 + '</td></tr>'
+                                + '<tr><td>前面道路の駅前状況</td><td>' + e.features[0].properties.L01_042 + '</td></tr>'
+                                + '<tr><td>前面道路の舗装状況</td><td>' + e.features[0].properties.L01_043 + '</td></tr>'
+                                + '<tr><td>側道状況</td><td>' + e.features[0].properties.L01_044 + '</td></tr>'
+                                + '<tr><td>側道の方位</td><td>' + e.features[0].properties.L01_045 + '</td></tr>'
+                                + '<tr><td>交通施設との近接状況</td><td>' + e.features[0].properties.L01_046 + '</td></tr>'
+                                + '<tr><td>周辺の土地利用の状況</td><td>' + e.features[0].properties.L01_047 + '</td></tr>'
+                                + '<tr><td>駅名</td><td>' + e.features[0].properties.L01_048 + '</td></tr>'
+                                + '<tr><td>駅からの距離</td><td>' + e.features[0].properties.L01_049 + 'm</td></tr>'
+                                + '<tr><td>用途区分</td><td>' + e.features[0].properties.L01_050 + '</td></tr>'
+                                + '<tr><td>防火区分</td><td>' + e.features[0].properties.L01_051 + '</td></tr>'
+                                + '<tr><td>都市計画区分</td><td>' + e.features[0].properties.L01_052 + '</td></tr>'
+                                + '<tr><td>高度地区</td><td>' + e.features[0].properties.L01_053 + '</td></tr>'
+                                + '<tr><td>森林区分</td><td>' + e.features[0].properties.L01_054 + '</td></tr>'
+                                + '<tr><td>公園区分</td><td>' + e.features[0].properties.L01_055 + '</td></tr>'
+                                + '<tr><td>建蔽率</td><td>' + e.features[0].properties.L01_056 + '%</td></tr>'
+                                + '<tr><td>容積率</td><td>' + e.features[0].properties.L01_057 + '%</td></tr>'
+                                + '<tr><td>割増容積率</td><td>' + e.features[0].properties.L01_058 + '</td></tr>'
+                                + '<tr><td>共通地点</td><td>' + e.features[0].properties.L01_059 + '</td></tr>'
+                                + '</table>';
+                        info.innerHTML = infoComment;
+                    });
                 }).fail(function () {
                     l01Requested = false;
                     loadFailed('l01');
                 });
-// 地価公示データを追加
-        map.on('click', 'l01', function (e) {
-            console.log("click")
-
-            var coordinates = e.features[0].geometry.coordinates.slice();
-            var html = e.features[0].properties.L01_024;
-            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-            }
-
-// ポップアップを表示する
-            new maplibregl.Popup()
-                    .setLngLat(coordinates)
-                    .setHTML(html)
-                    .addTo(map);
-            var infoName = $("#info-name")[0];
-            infoName.innerHTML = e.features[0].properties.L01_024;
-            var info = $("#info-comment")[0];
-            var infoComment = '<table>'
-                    + '<tr><td>見出し番号</td><td>' + e.features[0].properties.L01_001 + '('
-                    + (e.features[0].properties.L01_001 === '000' ? '住宅地' :
-                            (e.features[0].properties.L01_001 === '003' ? '宅地見込地' :
-                                    (e.features[0].properties.L01_001 === '005' ? '商業地' :
-                                            (e.features[0].properties.L01_001 === '007' ? '準工業地' :
-                                                    (e.features[0].properties.L01_001 === '009' ? '工業地' :
-                                                            (e.features[0].properties.L01_001 === '010' ? '市街化調整区域内の現況宅地' :
-                                                                    (e.features[0].properties.L01_001 === '013' ? '市街化調整区域内の現況林地' : '')))))))
-                    + ')</td></tr>'
-                    + '<tr><td>一連番号</td><td>' + e.features[0].properties.L01_002 + '</td></tr>'
-                    + '<tr><td>年度</td><td>' + e.features[0].properties.L01_005 + '</td></tr>'
-                    + '<tr><td>公示価格</td><td>' + e.features[0].properties.L01_006.toLocaleString() + '円/m2</td></tr>'
-                    + '<tr><td>対前年変動率</td><td>' + e.features[0].properties.L01_007.toLocaleString() + '%</td></tr>'
-                    + '<tr><td>標準地行政区域コード</td><td>' + e.features[0].properties.L01_022 + '</td></tr>'
-                    + '<tr><td>標準地市区町村名称</td><td>' + e.features[0].properties.L01_023 + '</td></tr>'
-                    + '<tr><td>所在並びに地番</td><td>' + e.features[0].properties.L01_024 + '</td></tr>'
-                    + '<tr><td>住居表示</td><td>' + e.features[0].properties.L01_025 + '</td></tr>'
-                    + '<tr><td>地積</td><td>' + e.features[0].properties.L01_026 + 'm2</td></tr>'
-                    + '<tr><td>利用現況</td><td>' + e.features[0].properties.L01_027 + '</td></tr>'
-                    + '<tr><td>利用状況表示</td><td>' + e.features[0].properties.L01_028 + '</td></tr>'
-                    + '<tr><td>利用区分</td><td>' + e.features[0].properties.L01_029 + '</td></tr>'
-                    + '<tr><td>建物構造</td><td>' + e.features[0].properties.L01_030 + '</td></tr>'
-                    + '<tr><td>供給施設有無（水道）</td><td>' + e.features[0].properties.L01_031 + '</td></tr>'
-                    + '<tr><td>供給施設有無（ガス）</td><td>' + e.features[0].properties.L01_032 + '</td></tr>'
-                    + '<tr><td>供給施設有無（下水）</td><td>' + e.features[0].properties.L01_033 + '</td></tr>'
-                    + '<tr><td>形状</td><td>' + e.features[0].properties.L01_034 + '</td></tr>'
-                    + '<tr><td>間口比率</td><td>' + e.features[0].properties.L01_035 + '</td></tr>'
-                    + '<tr><td>奥行比率</td><td>' + e.features[0].properties.L01_036 + '</td></tr>'
-                    + '<tr><td>地上階層</td><td>' + e.features[0].properties.L01_037 + '</td></tr>'
-                    + '<tr><td>地下階層</td><td>' + e.features[0].properties.L01_038 + '</td></tr>'
-                    + '<tr><td>前面道路状況</td><td>' + e.features[0].properties.L01_039 + '</td></tr>'
-                    + '<tr><td>前面道路の方位</td><td>' + e.features[0].properties.L01_040 + '</td></tr>'
-                    + '<tr><td>前面道路の幅員</td><td>' + e.features[0].properties.L01_041 + '</td></tr>'
-                    + '<tr><td>前面道路の駅前状況</td><td>' + e.features[0].properties.L01_042 + '</td></tr>'
-                    + '<tr><td>前面道路の舗装状況</td><td>' + e.features[0].properties.L01_043 + '</td></tr>'
-                    + '<tr><td>側道状況</td><td>' + e.features[0].properties.L01_044 + '</td></tr>'
-                    + '<tr><td>側道の方位</td><td>' + e.features[0].properties.L01_045 + '</td></tr>'
-                    + '<tr><td>交通施設との近接状況</td><td>' + e.features[0].properties.L01_046 + '</td></tr>'
-                    + '<tr><td>周辺の土地利用の状況</td><td>' + e.features[0].properties.L01_047 + '</td></tr>'
-                    + '<tr><td>駅名</td><td>' + e.features[0].properties.L01_048 + '</td></tr>'
-                    + '<tr><td>駅からの距離</td><td>' + e.features[0].properties.L01_049 + 'm</td></tr>'
-                    + '<tr><td>用途区分</td><td>' + e.features[0].properties.L01_050 + '</td></tr>'
-                    + '<tr><td>防火区分</td><td>' + e.features[0].properties.L01_051 + '</td></tr>'
-                    + '<tr><td>都市計画区分</td><td>' + e.features[0].properties.L01_052 + '</td></tr>'
-                    + '<tr><td>高度地区</td><td>' + e.features[0].properties.L01_053 + '</td></tr>'
-                    + '<tr><td>森林区分</td><td>' + e.features[0].properties.L01_054 + '</td></tr>'
-                    + '<tr><td>公園区分</td><td>' + e.features[0].properties.L01_055 + '</td></tr>'
-                    + '<tr><td>建蔽率</td><td>' + e.features[0].properties.L01_056 + '%</td></tr>'
-                    + '<tr><td>容積率</td><td>' + e.features[0].properties.L01_057 + '%</td></tr>'
-                    + '<tr><td>割増容積率</td><td>' + e.features[0].properties.L01_058 + '</td></tr>'
-                    + '<tr><td>共通地点</td><td>' + e.features[0].properties.L01_059 + '</td></tr>'
-                    + '</table>';
-            info.innerHTML = infoComment;
-        });
     }
     setVisibility('l01', value);
 }
@@ -619,25 +618,11 @@ check.onchange = function () {
                     map.on('click', 'n03', function (e) {
                         console.log("click")
 
-                        var coordinates;
-                        if (e.features[0].geometry.type === 'Polygon') {
-                            coordinates = e.features[0].geometry.coordinates[0][0].slice();
-                        } else if (e.features[0].geometry.type === 'MultiPolygon') {
-                            coordinates = e.features[0].geometry.coordinates[0][0][0].slice();
-                        } else if (e.features[0].geometry.type === 'LineString') {
-                            coordinates = e.features[0].geometry.coordinates[0].slice();
-                        } else if (e.features[0].geometry.type === 'MultiLineString') {
-                            coordinates = e.features[0].geometry.coordinates[0][0].slice();
-                        }
                         var html = e.features[0].properties.N03_004;
-
-                        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-                        }
 
                         // ポップアップを表示する
                         new maplibregl.Popup()
-                                .setLngLat(coordinates)
+                                .setLngLat(e.lngLat)
                                 .setHTML(html)
                                 .addTo(map);
                         var infoName = $("#info-name")[0];
@@ -669,7 +654,7 @@ check.onchange = function () {
     if (value === true && n02Requested === false) {
         n02Requested = true;
         // 鉄道データを追加
-        $.getJSON(context + '/N02/N02-20_RailroadSection.geojson', {},
+        var railroad = getJSONIfAbsent('n02RailroadSection', context + '/N02/N02-20_RailroadSection.geojson',
                 function (json) {
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
@@ -695,25 +680,11 @@ check.onchange = function () {
                     map.on('click', 'n02RailroadSection', function (e) {
                         console.log("click")
 
-                        var coordinates;
-                        if (e.features[0].geometry.type === 'Polygon') {
-                            coordinates = e.features[0].geometry.coordinates[0][0].slice();
-                        } else if (e.features[0].geometry.type === 'MultiPolygon') {
-                            coordinates = e.features[0].geometry.coordinates[0][0][0].slice();
-                        } else if (e.features[0].geometry.type === 'LineString') {
-                            coordinates = e.features[0].geometry.coordinates[0].slice();
-                        } else if (e.features[0].geometry.type === 'MultiLineString') {
-                            coordinates = e.features[0].geometry.coordinates[0][0].slice();
-                        }
                         var html = e.features[0].properties.N02_003;
-
-                        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-                        }
 
                         // ポップアップを表示する
                         new maplibregl.Popup()
-                                .setLngLat(coordinates)
+                                .setLngLat(e.lngLat)
                                 .setHTML(html)
                                 .addTo(map);
                         var infoName = $("#info-name")[0];
@@ -747,92 +718,79 @@ check.onchange = function () {
                                 + '</table>';
                         info.innerHTML = infoComment;
                     });
-                    $.getJSON(context + '/N02/N02-20_Station.geojson', {},
-                            function (json) {
+                });
+        var station = getJSONIfAbsent('n02Station', context + '/N02/N02-20_Station.geojson',
+                function (json) {
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
 //                    return feature.properties.P28_001.startsWith(areaCode);
 //                });
 //                json.features = filtered;
 
-                                map.addSource('n02Station', {
-                                    type: 'geojson',
-                                    data: json
-                                });
-                                map.addLayer({
-                                    'id': 'n02Station',
-                                    'type': 'line',
-                                    'source': 'n02Station',
-                                    'layout': {
-                                        'visibility': visibilityOf('n02')
-                                    },
-                                    "paint": {
-                                        "line-color": "rgba(0, 200, 0, 1)",
-                                        "line-width": 10
-                                    }
-                                });
+                    map.addSource('n02Station', {
+                        type: 'geojson',
+                        data: json
+                    });
+                    map.addLayer({
+                        'id': 'n02Station',
+                        'type': 'line',
+                        'source': 'n02Station',
+                        'layout': {
+                            'visibility': visibilityOf('n02')
+                        },
+                        "paint": {
+                            "line-color": "rgba(0, 200, 0, 1)",
+                            "line-width": 10
+                        }
+                    });
 
-                                map.on('click', 'n02Station', function (e) {
-                                    console.log("click")
+                    map.on('click', 'n02Station', function (e) {
+                        console.log("click")
 
-                                    var coordinates;
-                                    if (e.features[0].geometry.type === 'Polygon') {
-                                        coordinates = e.features[0].geometry.coordinates[0][0].slice();
-                                    } else if (e.features[0].geometry.type === 'MultiPolygon') {
-                                        coordinates = e.features[0].geometry.coordinates[0][0][0].slice();
-                                    } else if (e.features[0].geometry.type === 'LineString') {
-                                        coordinates = e.features[0].geometry.coordinates[0].slice();
-                                    } else if (e.features[0].geometry.type === 'MultiLineString') {
-                                        coordinates = e.features[0].geometry.coordinates[0][0].slice();
-                                    }
-                                    var html = e.features[0].properties.N02_005;
+                        var html = e.features[0].properties.N02_005;
 
-                                    while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                                        coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-                                    }
+                        // ポップアップを表示する
+                        new maplibregl.Popup()
+                                .setLngLat(e.lngLat)
+                                .setHTML(html)
+                                .addTo(map);
+                        var infoName = $("#info-name")[0];
+                        infoName.innerHTML = e.features[0].properties.N02_005;
 
-                                    // ポップアップを表示する
-                                    new maplibregl.Popup()
-                                            .setLngLat(coordinates)
-                                            .setHTML(html)
-                                            .addTo(map);
-                                    var infoName = $("#info-name")[0];
-                                    infoName.innerHTML = e.features[0].properties.N02_005;
-
-                                    var info = $("#info-comment")[0];
-                                    var infoComment = '<table>'
-                                            + '<tr><td>鉄道区分</td><td>' + e.features[0].properties.N02_001 + '('
-                                            + (e.features[0].properties.N02_001 === '11' ? '普通鉄道JR' :
-                                                    (e.features[0].properties.N02_001 === '12' ? '普通鉄道' :
-                                                            (e.features[0].properties.N02_001 === '13' ? '鋼索鉄道' :
-                                                                    (e.features[0].properties.N02_001 === '14' ? '懸垂式鉄道' :
-                                                                            (e.features[0].properties.N02_001 === '15' ? '跨座式鉄道' :
-                                                                                    (e.features[0].properties.N02_001 === '16' ? '案内軌条式鉄道' :
-                                                                                            (e.features[0].properties.N02_001 === '17' ? '無軌条鉄道' :
-                                                                                                    (e.features[0].properties.N02_001 === '21' ? '軌道' :
-                                                                                                            (e.features[0].properties.N02_001 === '22' ? '懸垂式モノレール' :
-                                                                                                                    (e.features[0].properties.N02_001 === '23' ? '跨座式モノレール' :
-                                                                                                                            (e.features[0].properties.N02_001 === '24' ? '案内軌条式' :
-                                                                                                                                    (e.features[0].properties.N02_001 === '25' ? '浮上式' : ''))))))))))))
-                                            + ')</td></tr>'
-                                            + '<tr><td>事業者種別</td><td>' + e.features[0].properties.N02_002 + '('
-                                            + (e.features[0].properties.N02_002 === '1' ? 'JRの新幹線' :
-                                                    (e.features[0].properties.N02_002 === '2' ? 'JR在来線' :
-                                                            (e.features[0].properties.N02_002 === '3' ? '公営鉄道' :
-                                                                    (e.features[0].properties.N02_002 === '4' ? '民営鉄道' :
-                                                                            (e.features[0].properties.N02_002 === '5' ? '第三セクター' : '')))))
-                                            + ')</td></tr>'
-                                            + '<tr><td>路線名</td><td>' + e.features[0].properties.N02_003 + '</td></tr>'
-                                            + '<tr><td>運営会社</td><td>' + e.features[0].properties.N02_004 + '</td></tr>'
-                                            + '<tr><td>駅名</td><td>' + e.features[0].properties.N02_005 + '</td></tr>'
-                                            + '</table>';
-                                    info.innerHTML = infoComment;
-                                });
-                            });
-                }).fail(function () {
-                    n02Requested = false;
-                    loadFailed('n02');
+                        var info = $("#info-comment")[0];
+                        var infoComment = '<table>'
+                                + '<tr><td>鉄道区分</td><td>' + e.features[0].properties.N02_001 + '('
+                                + (e.features[0].properties.N02_001 === '11' ? '普通鉄道JR' :
+                                        (e.features[0].properties.N02_001 === '12' ? '普通鉄道' :
+                                                (e.features[0].properties.N02_001 === '13' ? '鋼索鉄道' :
+                                                        (e.features[0].properties.N02_001 === '14' ? '懸垂式鉄道' :
+                                                                (e.features[0].properties.N02_001 === '15' ? '跨座式鉄道' :
+                                                                        (e.features[0].properties.N02_001 === '16' ? '案内軌条式鉄道' :
+                                                                                (e.features[0].properties.N02_001 === '17' ? '無軌条鉄道' :
+                                                                                        (e.features[0].properties.N02_001 === '21' ? '軌道' :
+                                                                                                (e.features[0].properties.N02_001 === '22' ? '懸垂式モノレール' :
+                                                                                                        (e.features[0].properties.N02_001 === '23' ? '跨座式モノレール' :
+                                                                                                                (e.features[0].properties.N02_001 === '24' ? '案内軌条式' :
+                                                                                                                        (e.features[0].properties.N02_001 === '25' ? '浮上式' : ''))))))))))))
+                                + ')</td></tr>'
+                                + '<tr><td>事業者種別</td><td>' + e.features[0].properties.N02_002 + '('
+                                + (e.features[0].properties.N02_002 === '1' ? 'JRの新幹線' :
+                                        (e.features[0].properties.N02_002 === '2' ? 'JR在来線' :
+                                                (e.features[0].properties.N02_002 === '3' ? '公営鉄道' :
+                                                        (e.features[0].properties.N02_002 === '4' ? '民営鉄道' :
+                                                                (e.features[0].properties.N02_002 === '5' ? '第三セクター' : '')))))
+                                + ')</td></tr>'
+                                + '<tr><td>路線名</td><td>' + e.features[0].properties.N02_003 + '</td></tr>'
+                                + '<tr><td>運営会社</td><td>' + e.features[0].properties.N02_004 + '</td></tr>'
+                                + '<tr><td>駅名</td><td>' + e.features[0].properties.N02_005 + '</td></tr>'
+                                + '</table>';
+                        info.innerHTML = infoComment;
+                    });
                 });
+        $.when(railroad, station).fail(function () {
+            n02Requested = false;
+            loadFailed('n02');
+        });
     }
     setVisibility('n02RailroadSection', value);
     setVisibility('n02Station', value);
@@ -849,7 +807,7 @@ check.onchange = function () {
     if (value === true && mesh500h30Requested === false) {
         mesh500h30Requested = true;
         // 500mメッシュ別将来推計人口データ（H30国政局推計）を追加
-        $.getJSON(context + '/mesh500h30/500m_mesh_2018_' + prefCode + '.geojson', {},
+        var mesh = getJSONIfAbsent('mesh500h30', context + '/mesh500h30/500m_mesh_2018_' + prefCode + '.geojson',
                 function (json) {
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
@@ -874,25 +832,11 @@ check.onchange = function () {
                     });
 
                     map.on('click', 'mesh500h30', function (e) {
-                        var coordinates;
-                        if (e.features[0].geometry.type === 'Polygon') {
-                            coordinates = e.features[0].geometry.coordinates[0][0].slice();
-                        } else if (e.features[0].geometry.type === 'MultiPolygon') {
-                            coordinates = e.features[0].geometry.coordinates[0][0][0].slice();
-                        } else if (e.features[0].geometry.type === 'LineString') {
-                            coordinates = e.features[0].geometry.coordinates[0].slice();
-                        } else if (e.features[0].geometry.type === 'MultiLineString') {
-                            coordinates = e.features[0].geometry.coordinates[0][0].slice();
-                        }
                         var html = e.features[0].properties.MESH_ID;
-
-                        while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                            coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-                        }
 
                         // ポップアップを表示する
                         new maplibregl.Popup()
-                                .setLngLat(coordinates)
+                                .setLngLat(e.lngLat)
                                 .setHTML(html)
                                 .addTo(map);
                         var infoName = $("#info-name")[0];
@@ -911,12 +855,10 @@ check.onchange = function () {
                         infoComment += '</table>';
                         info.innerHTML = infoComment;
                     });
-                }).fail(function () {
-                    mesh500h30Requested = false;
-                    loadFailed('mesh500h30');
                 });
+        var mesh2;
         if (prefCode === '01') {
-            $.getJSON(context + '/mesh500h30/500m_mesh_2018_' + prefCode + '-2.geojson', {},
+            mesh2 = getJSONIfAbsent('mesh500h30-2', context + '/mesh500h30/500m_mesh_2018_' + prefCode + '-2.geojson',
                     function (json) {
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
@@ -941,25 +883,11 @@ check.onchange = function () {
                         });
 
                         map.on('click', 'mesh500h30-2', function (e) {
-                            var coordinates;
-                            if (e.features[0].geometry.type === 'Polygon') {
-                                coordinates = e.features[0].geometry.coordinates[0][0].slice();
-                            } else if (e.features[0].geometry.type === 'MultiPolygon') {
-                                coordinates = e.features[0].geometry.coordinates[0][0][0].slice();
-                            } else if (e.features[0].geometry.type === 'LineString') {
-                                coordinates = e.features[0].geometry.coordinates[0].slice();
-                            } else if (e.features[0].geometry.type === 'MultiLineString') {
-                                coordinates = e.features[0].geometry.coordinates[0][0].slice();
-                            }
                             var html = e.features[0].properties.MESH_ID;
-
-                            while (Math.abs(e.lngLat.lng - coordinates[0]) > 180) {
-                                coordinates[0] += e.lngLat.lng > coordinates[0] ? 360 : -360;
-                            }
 
                             // ポップアップを表示する
                             new maplibregl.Popup()
-                                    .setLngLat(coordinates)
+                                    .setLngLat(e.lngLat)
                                     .setHTML(html)
                                     .addTo(map);
                             var infoName = $("#info-name")[0];
@@ -980,6 +908,10 @@ check.onchange = function () {
                         });
                     });
         }
+        $.when(mesh, mesh2).fail(function () {
+            mesh500h30Requested = false;
+            loadFailed('mesh500h30');
+        });
     }
     setVisibility('mesh500h30', value);
     setVisibility('mesh500h30-2', value);
