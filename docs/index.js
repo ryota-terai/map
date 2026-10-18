@@ -36,20 +36,51 @@ if (lat !== null && lon !== null) {
     map.setCenter([lon, lat]);
 }
 
+// 都道府県コード（areaCodeの上2桁）。未指定の場合はnull
+const prefCode = (areaCode === null || areaCode === '') ? null : areaCode.substring(0, 2);
+
+// 都道府県別データのため都道府県の選択を必須とする
+function requirePrefecture(checkbox) {
+    if (prefCode === null) {
+        alert('このデータを表示するには都道府県を選択してください');
+        checkbox.checked = false;
+        return false;
+    }
+    return true;
+}
+
+// チェックボックスの状態に応じたvisibilityの値を返す
+function visibilityOf(checkboxId) {
+    return document.getElementById(checkboxId).checked ? 'visible' : 'none';
+}
+
+// データの読み込みに失敗した場合はチェックを外して通知する
+function loadFailed(checkboxId) {
+    document.getElementById(checkboxId).checked = false;
+    alert('データの読み込みに失敗しました');
+}
+
+// 追加済みのレイヤの表示・非表示を切り替える（読み込み中のレイヤは何もしない）
+function setVisibility(layerId, visible) {
+    if (map.getLayer(layerId)) {
+        map.setLayoutProperty(layerId, 'visibility', visible ? 'visible' : 'none');
+    }
+}
+
 // 画面がロードされたら地図にレイヤを追加する
 map.on('load', function () {
 });
 
-var shelterLoaded = false;
+var shelterRequested = false;
 var check = document.getElementById('shelter');
 check.onchange = function () {
     var value = this.checked;
 
-    if (value === true && shelterLoaded === false) {
+    if (value === true && shelterRequested === false) {
+        shelterRequested = true;
         // 避難所情報レイヤを追加
         $.getJSON("./data/shelter.json", {},
                 function (json) {
-                    shelterLoaded = true;
                     var features = json.features;
                     var filtered = features.filter(function (feature) {
                         return areaCode === null || areaCode === '' || feature.properties.P20_001.startsWith(areaCode);
@@ -75,7 +106,8 @@ check.onchange = function () {
                         'source': 'shelter_point',
                         'layout': {
                             'icon-image': 'shelter_icon',
-                            'icon-size': 0.1
+                            'icon-size': 0.1,
+                            'visibility': visibilityOf('shelter')
                         }
                     });
 
@@ -120,26 +152,23 @@ check.onchange = function () {
                         info.innerHTML = infoComment;
 
                     });
+                }).fail(function () {
+                    shelterRequested = false;
+                    loadFailed('shelter');
                 });
     }
-    if (shelterLoaded) {
-        if (value === true) {
-            map.setLayoutProperty('shelter_point', 'visibility', 'visible');
-        } else {
-            map.setLayoutProperty('shelter_point', 'visibility', 'none');
-        }
-    }
+    setVisibility('shelter_point', value);
 }
 
 // 災害危険区域レイヤを追加
-var a48Loaded = false;
+var a48Requested = false;
 check = document.getElementById('a48');
 check.onchange = function () {
     var value = this.checked;
-    if (value === true && a48Loaded === false) {
+    if (value === true && a48Requested === false) {
+        a48Requested = true;
         $.getJSON(context + '/A48/a48.json', {},
                 function (json) {
-                    a48Loaded = true;
                     var features = json.features;
                     var filtered = features.filter(function (feature) {
                         return areaCode === null || areaCode === '' || feature.properties.A48_003.startsWith(areaCode);
@@ -154,6 +183,9 @@ check.onchange = function () {
                         'id': 'a48',
                         'type': 'fill',
                         'source': 'a48',
+                        'layout': {
+                            'visibility': visibilityOf('a48')
+                        },
                         "paint": {
                             "fill-antialias": false,
                             "fill-color": "rgba(0, 0, 0, 1)",
@@ -219,26 +251,26 @@ check.onchange = function () {
                                 + '</table>';
                         info.innerHTML = infoComment;
                     });
+                }).fail(function () {
+                    a48Requested = false;
+                    loadFailed('a48');
                 });
     }
-    if (a48Loaded) {
-        if (value === true) {
-            map.setLayoutProperty('a48', 'visibility', 'visible');
-        } else {
-            map.setLayoutProperty('a48', 'visibility', 'none');
-        }
-    }
+    setVisibility('a48', value);
 }
 
 // 地価公示データを追加
-var l01Loaded = false;
+var l01Requested = false;
 check = document.getElementById('l01');
 check.onchange = function () {
     var value = this.checked;
-    if (value === true && l01Loaded === false) {
-        $.getJSON(context+'/L01/L01-22_' + areaCode.substring(0, 2) + '.geojson', {},
+    if (value === true && !requirePrefecture(this)) {
+        return;
+    }
+    if (value === true && l01Requested === false) {
+        l01Requested = true;
+        $.getJSON(context + '/L01/L01-22_' + prefCode + '.geojson', {},
                 function (json) {
-                    l01Loaded = true;
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
 //                    return feature.properties.A48_003.startsWith(areaCode);
@@ -253,10 +285,16 @@ check.onchange = function () {
                         'id': 'l01',
                         'type': 'circle',
                         'source': 'l01',
+                        'layout': {
+                            'visibility': visibilityOf('l01')
+                        },
                         "paint": {
                             "circle-color": "rgba(255, 0, 0, 1)"
                         }
                     });
+                }).fail(function () {
+                    l01Requested = false;
+                    loadFailed('l01');
                 });
 // 地価公示データを追加
         map.on('click', 'l01', function (e) {
@@ -289,7 +327,7 @@ check.onchange = function () {
                     + '<tr><td>一連番号</td><td>' + e.features[0].properties.L01_002 + '</td></tr>'
                     + '<tr><td>年度</td><td>' + e.features[0].properties.L01_005 + '</td></tr>'
                     + '<tr><td>公示価格</td><td>' + e.features[0].properties.L01_006.toLocaleString() + '円/m2</td></tr>'
-                    + '<tr><td>対前年変動率</td><td>' + e.features[0].properties.L01_007.toLocaleString() + '円/m2</td></tr>'
+                    + '<tr><td>対前年変動率</td><td>' + e.features[0].properties.L01_007.toLocaleString() + '%</td></tr>'
                     + '<tr><td>標準地行政区域コード</td><td>' + e.features[0].properties.L01_022 + '</td></tr>'
                     + '<tr><td>標準地市区町村名称</td><td>' + e.features[0].properties.L01_023 + '</td></tr>'
                     + '<tr><td>所在並びに地番</td><td>' + e.features[0].properties.L01_024 + '</td></tr>'
@@ -332,25 +370,19 @@ check.onchange = function () {
             info.innerHTML = infoComment;
         });
     }
-    if (l01Loaded) {
-        if (value === true) {
-            map.setLayoutProperty('l01', 'visibility', 'visible');
-        } else {
-            map.setLayoutProperty('l01', 'visibility', 'none');
-        }
-    }
+    setVisibility('l01', value);
 }
 
 // 国・都道府県の機関データを追加
-var p28Loaded = false;
+var p28Requested = false;
 check = document.getElementById('p28');
 check.onchange = function () {
     var value = this.checked;
-    if (value === true && p28Loaded === false) {
+    if (value === true && p28Requested === false) {
+        p28Requested = true;
         // 国・都道府県の機関データを追加
         $.getJSON(context + '/P28/P28-13.geojson', {},
                 function (json) {
-                    p28Loaded = true;
                     var features = json.features;
                     var filtered = features.filter(function (feature) {
                         return areaCode === null || areaCode === '' || feature.properties.P28_001.startsWith(areaCode);
@@ -365,6 +397,9 @@ check.onchange = function () {
                         'id': 'p28',
                         'type': 'circle',
                         'source': 'p28',
+                        'layout': {
+                            'visibility': visibilityOf('p28')
+                        },
                         "paint": {
                             "circle-color": "rgba(0, 255, 0, 1)"
                         }
@@ -538,25 +573,26 @@ check.onchange = function () {
                                 + '</table>';
                         info.innerHTML = infoComment;
                     });
+                }).fail(function () {
+                    p28Requested = false;
+                    loadFailed('p28');
                 });
     }
-    if (p28Loaded) {
-        if (value === true) {
-            map.setLayoutProperty('p28', 'visibility', 'visible');
-        } else {
-            map.setLayoutProperty('p28', 'visibility', 'none');
-        }
-    }
+    setVisibility('p28', value);
 }
 
 // 行政区域データ
-var n03Loaded = false;
+var n03Requested = false;
 check = document.getElementById('n03');
 check.onchange = function () {
     var value = this.checked;
-    if (value === true && n03Loaded === false) {
+    if (value === true && !requirePrefecture(this)) {
+        return;
+    }
+    if (value === true && n03Requested === false) {
+        n03Requested = true;
         // 鉄道データを追加
-        $.getJSON(context + '/N03/N03-21_' + (areaCode === null ? '' : areaCode.substring(0, 2)) + '_210101.geojson', {},
+        $.getJSON(context + '/N03/N03-21_' + prefCode + '_210101.geojson', {},
                 function (json) {
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
@@ -572,6 +608,9 @@ check.onchange = function () {
                         'id': 'n03',
                         'type': 'line',
                         'source': 'n03',
+                        'layout': {
+                            'visibility': visibilityOf('n03')
+                        },
                         "paint": {
                             "line-color": "rgba(0, 255, 0, 1)",
                             "line-width": 5
@@ -614,23 +653,21 @@ check.onchange = function () {
                                 + '</table>';
                         info.innerHTML = infoComment;
                     });
+                }).fail(function () {
+                    n03Requested = false;
+                    loadFailed('n03');
                 });
     }
-    if (n03Loaded) {
-        if (value === true) {
-            map.setLayoutProperty('n03', 'visibility', 'visible');
-        } else {
-            map.setLayoutProperty('n03', 'visibility', 'none');
-        }
-    }
+    setVisibility('n03', value);
 }
 
 // 鉄道データを追加
-var n02Loaded = false;
+var n02Requested = false;
 check = document.getElementById('n02');
 check.onchange = function () {
     var value = this.checked;
-    if (value === true && n02Loaded === false) {
+    if (value === true && n02Requested === false) {
+        n02Requested = true;
         // 鉄道データを追加
         $.getJSON(context + '/N02/N02-20_RailroadSection.geojson', {},
                 function (json) {
@@ -648,6 +685,9 @@ check.onchange = function () {
                         'id': 'n02RailroadSection',
                         'type': 'line',
                         'source': 'n02RailroadSection',
+                        'layout': {
+                            'visibility': visibilityOf('n02')
+                        },
                         "paint": {
                             "line-color": "rgba(0, 200, 0, 1)"
                         }
@@ -709,7 +749,6 @@ check.onchange = function () {
                     });
                     $.getJSON(context + '/N02/N02-20_Station.geojson', {},
                             function (json) {
-                                n02Loaded = true;
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
 //                    return feature.properties.P28_001.startsWith(areaCode);
@@ -724,6 +763,9 @@ check.onchange = function () {
                                     'id': 'n02Station',
                                     'type': 'line',
                                     'source': 'n02Station',
+                                    'layout': {
+                                        'visibility': visibilityOf('n02')
+                                    },
                                     "paint": {
                                         "line-color": "rgba(0, 200, 0, 1)",
                                         "line-width": 10
@@ -787,29 +829,28 @@ check.onchange = function () {
                                     info.innerHTML = infoComment;
                                 });
                             });
+                }).fail(function () {
+                    n02Requested = false;
+                    loadFailed('n02');
                 });
     }
-    if (n02Loaded) {
-        if (value === true) {
-            map.setLayoutProperty('n02RailroadSection', 'visibility', 'visible');
-            map.setLayoutProperty('n02Station', 'visibility', 'visible');
-        } else {
-            map.setLayoutProperty('n02RailroadSection', 'visibility', 'none');
-            map.setLayoutProperty('n02Station', 'visibility', 'none');
-        }
-    }
+    setVisibility('n02RailroadSection', value);
+    setVisibility('n02Station', value);
 }
 
 // 500mメッシュ別将来推計人口データ（H30国政局推計）を追加
-var mesh500h30Loaded = false;
+var mesh500h30Requested = false;
 check = document.getElementById('mesh500h30');
 check.onchange = function () {
     var value = this.checked;
-    if (value === true && mesh500h30Loaded === false) {
+    if (value === true && !requirePrefecture(this)) {
+        return;
+    }
+    if (value === true && mesh500h30Requested === false) {
+        mesh500h30Requested = true;
         // 500mメッシュ別将来推計人口データ（H30国政局推計）を追加
-        $.getJSON(context + '/mesh500h30/500m_mesh_2018_' + (areaCode === null ? '' : areaCode.substring(0, 2)) + '.geojson', {},
+        $.getJSON(context + '/mesh500h30/500m_mesh_2018_' + prefCode + '.geojson', {},
                 function (json) {
-                    mesh500h30Loaded = true;
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
 //                    return areaCode === null || areaCode === '' || feature.properties.P28_001.startsWith(areaCode);
@@ -824,6 +865,9 @@ check.onchange = function () {
                         'id': 'mesh500h30',
                         'type': 'fill',
                         'source': 'mesh500h30',
+                        'layout': {
+                            'visibility': visibilityOf('mesh500h30')
+                        },
                         "paint": {
                             "fill-color": "rgba(0, 0, 255, 0.2)"
                         }
@@ -867,11 +911,13 @@ check.onchange = function () {
                         infoComment += '</table>';
                         info.innerHTML = infoComment;
                     });
+                }).fail(function () {
+                    mesh500h30Requested = false;
+                    loadFailed('mesh500h30');
                 });
-        if (areaCode.substring(0, 2) === '01') {
-            $.getJSON(context + '/mesh500h30/500m_mesh_2018_' + (areaCode === null ? '' : areaCode.substring(0, 2)) + '-2.geojson', {},
+        if (prefCode === '01') {
+            $.getJSON(context + '/mesh500h30/500m_mesh_2018_' + prefCode + '-2.geojson', {},
                     function (json) {
-                        mesh500h30Loaded = true;
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
 //                    return areaCode === null || areaCode === '' || feature.properties.P28_001.startsWith(areaCode);
@@ -886,6 +932,9 @@ check.onchange = function () {
                             'id': 'mesh500h30-2',
                             'type': 'fill',
                             'source': 'mesh500h30-2',
+                            'layout': {
+                                'visibility': visibilityOf('mesh500h30')
+                            },
                             "paint": {
                                 "fill-color": "rgba(0, 0, 255, 0.2)"
                             }
@@ -932,19 +981,8 @@ check.onchange = function () {
                     });
         }
     }
-    if (mesh500h30Loaded) {
-        if (value === true) {
-            map.setLayoutProperty('mesh500h30', 'visibility', 'visible');
-            if (areaCode.substring(0, 2) === '01') {
-                map.setLayoutProperty('mesh500h30-2', 'visibility', 'visible');
-            }
-        } else {
-            map.setLayoutProperty('mesh500h30', 'visibility', 'none');
-            if (areaCode.substring(0, 2) === '01') {
-                map.setLayoutProperty('mesh500h30-2', 'visibility', 'none');
-            }
-        }
-    }
+    setVisibility('mesh500h30', value);
+    setVisibility('mesh500h30-2', value);
 }
 
 var select = document.getElementById('prefecture');
