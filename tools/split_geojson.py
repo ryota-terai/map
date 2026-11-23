@@ -4,10 +4,9 @@
 使い方:
     python3 tools/split_geojson.py data/shelter.json data/gml/datalist/N03/N03-20260101_01.geojson ...
 
-元のファイル(例: foo.geojson)は分割後のファイル一覧を持つインデックスに置き換わる。
-    {"type": "SplitFeatureCollection", "parts": ["foo.part1.geojson", "foo.part2.geojson"]}
+元のファイル(例: foo.geojson)はfoo.part1.geojson〜foo.partN.geojsonに分割され、削除される。
 各パートは元のファイルのトップレベル属性(name, crs等)を引き継いだFeatureCollection。
-index.jsのgetGeoJSON()がインデックスを検出してパートを取得・結合する。
+分割後に出力される行をindex.jsのSPLIT_PARTSに追加すると、getGeoJSON()がパートを取得・結合する。
 """
 import json
 import os
@@ -30,9 +29,6 @@ def write_part(path, header, feature_lines):
 def split(path):
     with open(path, encoding='utf-8') as f:
         data = json.load(f)
-    if data.get('type') == 'SplitFeatureCollection':
-        print(f'skip (already split): {path}')
-        return
 
     features = data.pop('features')
     # "features"以外の属性を先頭に書き、featuresは1行1地物で出力する
@@ -58,9 +54,10 @@ def split(path):
         write_part(os.path.join(directory, name), header, part)
         names.append(name)
 
-    with open(path, 'w', encoding='utf-8') as f:
-        f.write(dumps({'type': 'SplitFeatureCollection', 'parts': names}) + '\n')
-    print(f'{path}: {len(features)} features -> {len(names)} parts')
+    os.remove(path)
+    print(f'{path}: {len(features)} features -> {len(names)} parts', file=sys.stderr)
+    # index.jsのSPLIT_PARTSに追加する行
+    print(f"    './{os.path.relpath(path)}': {len(names)},")
 
 
 if __name__ == '__main__':

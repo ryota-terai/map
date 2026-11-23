@@ -60,32 +60,84 @@ function loadFailed(checkboxId) {
     alert('データの読み込みに失敗しました');
 }
 
-// GeoJSONを取得する。ファイルサイズ制限のため分割されたファイル（tools/split_geojson.pyで生成した
-// SplitFeatureCollection）の場合は、全パートを取得して1つのFeatureCollectionに結合する
+// ファイルサイズ制限（Cloudflare Pagesは1ファイル25MiBまで）のためtools/split_geojson.pyで分割したファイルのパート数。
+// 「foo.geojson」は「foo.part1.geojson」〜「foo.partN.geojson」に分割されている
+const SPLIT_PARTS = {
+    './data/gml/datalist/N03/N03-20260101_01.geojson': 3,
+    './data/gml/datalist/N03/N03-20260101_03.geojson': 2,
+    './data/gml/datalist/N03/N03-20260101_04.geojson': 2,
+    './data/gml/datalist/N03/N03-20260101_42.geojson': 2,
+    './data/gml/datalist/N03/N03-20260101_46.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_01-2.geojson': 5,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_01.geojson': 5,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_02.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_03.geojson': 4,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_04.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_05.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_06.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_07.geojson': 4,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_08.geojson': 4,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_09.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_10.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_11.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_12.geojson': 4,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_13.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_14.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_15.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_16.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_17.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_20.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_21.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_22.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_23.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_24.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_26.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_27.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_28.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_30.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_32.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_33.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_34.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_35.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_36.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_38.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_39.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_40.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_41.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_42.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_43.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_44.geojson': 3,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_45.geojson': 2,
+    './data/gml/datalist/mesh500h30/500m_mesh_2018_46.geojson': 4,
+    './data/shelter.json': 3
+};
+
+// GeoJSONを取得する。分割されたファイルの場合は全パートを取得して1つのFeatureCollectionに結合する
 function getGeoJSON(url, callback) {
     var deferred = $.Deferred();
-    $.getJSON(url).done(function (json) {
-        if (json.type !== 'SplitFeatureCollection') {
-            deferred.resolve(json);
-            return;
+    var partCount = SPLIT_PARTS[url];
+    var urls = [url];
+    if (partCount) {
+        var ext = url.substring(url.lastIndexOf('.'));
+        var stem = url.substring(0, url.lastIndexOf('.'));
+        urls = [];
+        for (var n = 1; n <= partCount; n++) {
+            urls.push(stem + '.part' + n + ext);
         }
-        var baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
-        var requests = json.parts.map(function (part) {
-            return $.getJSON(baseUrl + part);
+    }
+    var requests = urls.map(function (u) {
+        return $.getJSON(u);
+    });
+    $.when.apply($, requests).done(function () {
+        // 複数リクエストの場合、各引数は[data, textStatus, jqXHR]
+        var results = requests.length === 1 ? [arguments[0]] : Array.prototype.map.call(arguments, function (args) {
+            return args[0];
         });
-        $.when.apply($, requests).done(function () {
-            // 複数リクエストの場合、各引数は[data, textStatus, jqXHR]
-            var results = requests.length === 1 ? [arguments[0]] : Array.prototype.map.call(arguments, function (args) {
-                return args[0];
-            });
-            var merged = results[0];
-            for (var i = 1; i < results.length; i++) {
-                merged.features = merged.features.concat(results[i].features);
-            }
-            deferred.resolve(merged);
-        }).fail(function () {
-            deferred.reject();
-        });
+        var merged = results[0];
+        for (var i = 1; i < results.length; i++) {
+            merged.features = merged.features.concat(results[i].features);
+        }
+        deferred.resolve(merged);
     }).fail(function () {
         deferred.reject();
     });
