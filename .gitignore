@@ -1,1 +1,4 @@
 /docs/.vscode
+# GitHubのファイルサイズ上限(100MB)を超えるため分割版(-1, -2)を使用する
+/docs/data/gml/datalist/A33/A33-25_34Polygon.geojson
+/docs/data/gml/datalist/A33/A33-25_46Polygon.geojson

@@ -258,6 +258,135 @@ check.onchange = function () {
     setVisibility('a48', value);
 }
 
+// 土砂災害警戒区域データ（A33）を追加
+// GitHubのファイルサイズ上限を超える都道府県は複数ファイルに分割している
+var a33SplitCounts = {'34': 2, '46': 2};
+// ポリゴンとは別にラインデータがある都道府県
+var a33LinePrefCodes = ['34'];
+
+function a33Files() {
+    var files = [];
+    var splitCount = a33SplitCounts[prefCode];
+    if (splitCount === undefined) {
+        files.push('A33-25_' + prefCode + 'Polygon.geojson');
+    } else {
+        for (var i = 1; i <= splitCount; i++) {
+            files.push('A33-25_' + prefCode + 'Polygon-' + i + '.geojson');
+        }
+    }
+    if (a33LinePrefCodes.indexOf(prefCode) >= 0) {
+        files.push('A33-25_' + prefCode + 'Line.geojson');
+    }
+    return files;
+}
+
+function a33LayerIds() {
+    var ids = [];
+    if (prefCode === null) {
+        return ids;
+    }
+    a33Files().forEach(function (file, index) {
+        ids.push('a33-' + index + '-fill');
+        ids.push('a33-' + index + '-line');
+    });
+    return ids;
+}
+
+// 区域区分（警戒区域・特別警戒区域）で色分けする
+var a33Color = ['match', ['get', 'A33_002'],
+    1, 'rgba(255, 200, 0, 1)',
+    2, 'rgba(255, 0, 0, 1)',
+    'rgba(128, 128, 128, 1)'];
+
+function a33OnClick(e) {
+    var properties = e.features[0].properties;
+    var html = properties.A33_006;
+
+    // ポップアップを表示する
+    new maplibregl.Popup()
+            .setLngLat(e.lngLat)
+            .setHTML(html)
+            .addTo(map);
+    var infoName = $("#info-name")[0];
+    infoName.innerHTML = properties.A33_006;
+
+    var info = $("#info-comment")[0];
+    var infoComment = '<table>'
+            + '<tr><td>現象の種類</td><td>' + properties.A33_001 + '('
+            + (properties.A33_001 === 1 ? '急傾斜地の崩壊' :
+                    (properties.A33_001 === 2 ? '土石流' :
+                            (properties.A33_001 === 3 ? '地すべり' : '')))
+            + ')</td></tr>'
+            + '<tr><td>区域区分</td><td>' + properties.A33_002 + '('
+            + (properties.A33_002 === 1 ? '土砂災害警戒区域' :
+                    (properties.A33_002 === 2 ? '土砂災害特別警戒区域' : ''))
+            + ')</td></tr>'
+            + '<tr><td>都道府県コード</td><td>' + properties.A33_003 + '</td></tr>'
+            + '<tr><td>区域番号</td><td>' + properties.A33_004 + '</td></tr>'
+            + '<tr><td>区域名</td><td>' + properties.A33_005 + '</td></tr>'
+            + '<tr><td>所在地</td><td>' + properties.A33_006 + '</td></tr>'
+            + '<tr><td>公示日</td><td>' + properties.A33_007 + '</td></tr>'
+            + '</table>';
+    info.innerHTML = infoComment;
+}
+
+var a33Requested = false;
+check = document.getElementById('a33');
+check.onchange = function () {
+    var value = this.checked;
+    if (value === true && !requirePrefecture(this)) {
+        return;
+    }
+    if (value === true && a33Requested === false) {
+        a33Requested = true;
+        var requests = a33Files().map(function (file, index) {
+            var sourceId = 'a33-' + index;
+            return getJSONIfAbsent(sourceId, context + '/A33/' + file,
+                    function (json) {
+                        map.addSource(sourceId, {
+                            type: 'geojson',
+                            data: json
+                        });
+                        map.addLayer({
+                            'id': sourceId + '-fill',
+                            'type': 'fill',
+                            'source': sourceId,
+                            'filter': ['==', ['geometry-type'], 'Polygon'],
+                            'layout': {
+                                'visibility': visibilityOf('a33')
+                            },
+                            "paint": {
+                                "fill-color": a33Color,
+                                "fill-opacity": 0.4
+                            }
+                        });
+                        map.addLayer({
+                            'id': sourceId + '-line',
+                            'type': 'line',
+                            'source': sourceId,
+                            'filter': ['==', ['geometry-type'], 'LineString'],
+                            'layout': {
+                                'visibility': visibilityOf('a33')
+                            },
+                            "paint": {
+                                "line-color": a33Color,
+                                "line-width": 3
+                            }
+                        });
+                        map.on('click', sourceId + '-fill', a33OnClick);
+                        map.on('click', sourceId + '-line', a33OnClick);
+                    });
+        });
+        $.when.apply($, requests).fail(function () {
+            a33Requested = false;
+            loadFailed('a33');
+        });
+    }
+    a33LayerIds().forEach(function (layerId) {
+        setVisibility(layerId, value);
+    });
+}
+
 // 地価公示データを追加
 var l01Requested = false;
 check = document.getElementById('l01');
