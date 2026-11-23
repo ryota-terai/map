@@ -60,12 +60,47 @@ function loadFailed(checkboxId) {
     alert('データの読み込みに失敗しました');
 }
 
+// GeoJSONを取得する。ファイルサイズ制限のため分割されたファイル（tools/split_geojson.pyで生成した
+// SplitFeatureCollection）の場合は、全パートを取得して1つのFeatureCollectionに結合する
+function getGeoJSON(url, callback) {
+    var deferred = $.Deferred();
+    $.getJSON(url).done(function (json) {
+        if (json.type !== 'SplitFeatureCollection') {
+            deferred.resolve(json);
+            return;
+        }
+        var baseUrl = url.substring(0, url.lastIndexOf('/') + 1);
+        var requests = json.parts.map(function (part) {
+            return $.getJSON(baseUrl + part);
+        });
+        $.when.apply($, requests).done(function () {
+            // 複数リクエストの場合、各引数は[data, textStatus, jqXHR]
+            var results = requests.length === 1 ? [arguments[0]] : Array.prototype.map.call(arguments, function (args) {
+                return args[0];
+            });
+            var merged = results[0];
+            for (var i = 1; i < results.length; i++) {
+                merged.features = merged.features.concat(results[i].features);
+            }
+            deferred.resolve(merged);
+        }).fail(function () {
+            deferred.reject();
+        });
+    }).fail(function () {
+        deferred.reject();
+    });
+    if (callback) {
+        deferred.done(callback);
+    }
+    return deferred.promise();
+}
+
 // 未追加のソースのデータのみ取得する（複数ファイルのうち一部の取得に失敗した後の再試行用）
 function getJSONIfAbsent(sourceId, url, callback) {
     if (map.getSource(sourceId)) {
         return $.Deferred().resolve().promise();
     }
-    return $.getJSON(url, {}, function (json) {
+    return getGeoJSON(url, function (json) {
         // 再試行と競合して既に追加済みの場合は何もしない
         if (!map.getSource(sourceId)) {
             callback(json);
@@ -92,7 +127,7 @@ check.onchange = function () {
     if (value === true && shelterRequested === false) {
         shelterRequested = true;
         // 避難所情報レイヤを追加
-        $.getJSON("./data/shelter.json", {},
+        getGeoJSON("./data/shelter.json",
                 function (json) {
                     var features = json.features;
                     var filtered = features.filter(function (feature) {
@@ -180,7 +215,7 @@ check.onchange = function () {
     var value = this.checked;
     if (value === true && a48Requested === false) {
         a48Requested = true;
-        $.getJSON(context + '/A48/a48.json', {},
+        getGeoJSON(context + '/A48/a48.json',
                 function (json) {
                     var features = json.features;
                     var filtered = features.filter(function (feature) {
@@ -268,7 +303,7 @@ check.onchange = function () {
     }
     if (value === true && l01Requested === false) {
         l01Requested = true;
-        $.getJSON(context + '/L01/L01-22_' + prefCode + '.geojson', {},
+        getGeoJSON(context + '/L01/L01-22_' + prefCode + '.geojson',
                 function (json) {
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
@@ -380,7 +415,7 @@ check.onchange = function () {
     if (value === true && p28Requested === false) {
         p28Requested = true;
         // 国・都道府県の機関データを追加
-        $.getJSON(context + '/P28/P28-13.geojson', {},
+        getGeoJSON(context + '/P28/P28-13.geojson',
                 function (json) {
                     var features = json.features;
                     var filtered = features.filter(function (feature) {
@@ -591,7 +626,7 @@ check.onchange = function () {
     if (value === true && n03Requested === false) {
         n03Requested = true;
         // 鉄道データを追加
-        $.getJSON(context + '/N03/N03-20260101_' + prefCode + '.geojson', {},
+        getGeoJSON(context + '/N03/N03-20260101_' + prefCode + '.geojson',
                 function (json) {
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
