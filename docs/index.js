@@ -591,7 +591,7 @@ check.onchange = function () {
     if (value === true && n03Requested === false) {
         n03Requested = true;
         // 鉄道データを追加
-        $.getJSON(context + '/N03/N03-21_' + prefCode + '_210101.geojson', {},
+        $.getJSON(context + '/N03/N03-20260101_' + prefCode + '.geojson', {},
                 function (json) {
 //                var features = json.features;
 //                var filtered = features.filter(function (feature) {
