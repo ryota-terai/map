@@ -1007,6 +1007,9 @@ check.onchange = function () {
 var select = document.getElementById('prefecture');
 select.onchange = function () {
     var areaCode = this.value;
+    if (!/^\d{2}$/.test(areaCode)) {
+        return;
+    }
     var positionUrl;
     switch (areaCode) {
         case "":
@@ -1153,7 +1156,9 @@ select.onchange = function () {
             positionUrl = "&lat=26.212365&lon=127.680975";
             break;
     }
-    window.location.href = "index.html?areaCode=" + areaCode + positionUrl;
+    var destination = new URL('index.html', window.location.href);
+    destination.searchParams.set('areaCode', areaCode);
+    window.location.href = destination.toString() + positionUrl;
 }
 
 var updateButton = document.getElementById('updateDetails');
